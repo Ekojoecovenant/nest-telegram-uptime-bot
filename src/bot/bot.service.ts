@@ -6,6 +6,7 @@ import { conversations, createConversation } from '@grammyjs/conversations';
 import { Bot } from 'grammy';
 import type { MyContext } from './types';
 import { createMainMenu } from './menus/main.menu';
+import { UserWebsiteService } from 'src/user-website/user-website.service';
 
 @Injectable()
 export class BotService implements OnModuleInit {
@@ -14,6 +15,7 @@ export class BotService implements OnModuleInit {
 
   constructor(
     private config: ConfigService,
+    private userWebsiteService: UserWebsiteService,
     private startHandler: StartHandler,
     private addWebsiteConv: AddWebsiteConversation,
   ) {
@@ -40,7 +42,7 @@ export class BotService implements OnModuleInit {
     );
 
     // main menu
-    const mainMenu = createMainMenu();
+    const mainMenu = createMainMenu(this.userWebsiteService);
 
     this.bot.use(mainMenu);
 

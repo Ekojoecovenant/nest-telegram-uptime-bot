@@ -42,4 +42,14 @@ export class UserWebsiteService {
 
     return website;
   }
+
+  // get all user's websites
+  async getUserWebsites(telegramId: string): Promise<Website[]> {
+    const user = await this.userRepo.findOne({
+      where: { id: telegramId },
+      relations: ['websites'],
+    });
+
+    return user?.websites || [];
+  }
 }

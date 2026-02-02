@@ -95,7 +95,7 @@ export class AddWebsiteConversation {
 
     // After success, show main menu again (nice touch)
     await ctx.reply('What would you like to do next?', {
-      reply_markup: createMainMenu(), // assuming main menu is available via ctx.menu
+      reply_markup: createMainMenu(this.userWebsiteService), // assuming main menu is available via ctx.menu
     });
   }
 }
