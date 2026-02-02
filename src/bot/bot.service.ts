@@ -39,7 +39,7 @@ export class BotService implements OnModuleInit {
       ),
     );
 
-    // 3: update the "Add Website" button in the menu
+    // main menu
     const mainMenu = new Menu<MyContext>('main-menu')
       .text('➕ Add Website', async (ctx) => {
         await ctx.answerCallbackQuery();
