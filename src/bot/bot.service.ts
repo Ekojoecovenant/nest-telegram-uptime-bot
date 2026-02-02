@@ -1,11 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { StartHandler } from './handlers/start.handler';
-import { Menu } from '@grammyjs/menu';
 import { AddWebsiteConversation } from './conversations/add-website.conv';
 import { conversations, createConversation } from '@grammyjs/conversations';
 import { Bot } from 'grammy';
 import type { MyContext } from './types';
+import { createMainMenu } from './menus/main.menu';
 
 @Injectable()
 export class BotService implements OnModuleInit {
@@ -40,27 +40,7 @@ export class BotService implements OnModuleInit {
     );
 
     // main menu
-    const mainMenu = new Menu<MyContext>('main-menu')
-      .text('➕ Add Website', async (ctx) => {
-        await ctx.answerCallbackQuery();
-        // Enter the conversation!
-        await ctx.conversation.enter('add-website');
-      })
-      .row()
-      .text('📋 My Websites', async (ctx) => {
-        await ctx.answerCallbackQuery();
-        await ctx.editMessageText('No websites added yet.', {
-          reply_markup: mainMenu, // keep menu
-        });
-      })
-      .row()
-      .text('ℹ️ Help', async (ctx) => {
-        await ctx.answerCallbackQuery();
-        await ctx.editMessageText(
-          'Monitor websites * Alerts on down/up * 1 min checks',
-          { reply_markup: mainMenu },
-        );
-      });
+    const mainMenu = createMainMenu();
 
     this.bot.use(mainMenu);
 

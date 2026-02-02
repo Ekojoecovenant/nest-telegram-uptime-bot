@@ -1,24 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { type Conversation } from '@grammyjs/conversations';
 import type { MyContext } from '../types';
+import { UserWebsiteService } from 'src/user-website/user-website.service';
 
 @Injectable()
 export class AddWebsiteConversation {
+  constructor(private userWebsiteService: UserWebsiteService) {}
+
   // This is the actual conversation function
   async addWebsite(conversation: Conversation<MyContext>, ctx: MyContext) {
     // keep asking for URL until we get a valid URL or user cancels somehow
     while (true) {
       await ctx.reply(
         '🌐 Please send the full websites URL you want to monitor\n' +
-          'Example: https://example.com or https://api.mysite.com',
+          'Examples:\n• https://example.com\n• https://api.mysite.com',
       );
 
       // Wait for user to send a text message
       const { message } = await conversation.waitFor('message:text');
-
       const input = message.text?.trim();
 
-      // 3. Very basic validation (improve later)
+      // Very basic validation (improve later)
       if (!input) {
         await ctx.reply('❌ No URL received. Please try again.');
         continue;
@@ -70,16 +72,23 @@ export class AddWebsiteConversation {
         continue;
       }
 
-      // 4. Clean it up a bit (normalize)
+      // Clean up the url a bit (normalize)
       const cleanUrl = parsedUrl.origin + parsedUrl.pathname + parsedUrl.search;
+
+      // Save it!
+      const savedWebsite = await this.userWebsiteService.addWebsite(
+        ctx.from!.id.toString(),
+        cleanUrl,
+      );
 
       // Success!
       await ctx.reply(
-        `✅ Looks good!\n\nMonitored URL: ${cleanUrl}\n` +
-          `Status: ⌛ Pending first check\n\nWe'll start checking it soon.`,
+        `✅ Looks good!\n\n` +
+          `URL: ${savedWebsite.url}\n` +
+          `ID: ${savedWebsite.id}\n` +
+          `Status: ⌛ Pending first check`,
       );
 
-      // TODO: save to database using service
       break;
     }
 
