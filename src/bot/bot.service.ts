@@ -1,21 +1,25 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Bot, Context } from 'grammy';
 import { StartHandler } from './handlers/start.handler';
 import { Menu } from '@grammyjs/menu';
+import { AddWebsiteConversation } from './conversations/add-website.conv';
+import { conversations, createConversation } from '@grammyjs/conversations';
+import { Bot } from 'grammy';
+import type { MyContext } from './types';
 
 @Injectable()
 export class BotService implements OnModuleInit {
   private readonly logger = new Logger(BotService.name);
-  private readonly bot: Bot;
+  private readonly bot: Bot<MyContext>;
 
   constructor(
     private config: ConfigService,
     private startHandler: StartHandler,
+    private addWebsiteConv: AddWebsiteConversation,
   ) {
     const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
     if (!token) throw new Error('TELEGRAM_BOT_TOKEN not set');
-    this.bot = new Bot(token);
+    this.bot = new Bot<MyContext>(token);
   }
 
   async onModuleInit() {
@@ -24,17 +28,23 @@ export class BotService implements OnModuleInit {
       this.logger.error('Bot error occurred', err);
     });
 
-    // registers handlers
-    this.bot.command('start', (ctx) => this.startHandler.handle(ctx));
+    // Register conversations middleware (very important!)
+    this.bot.use(conversations());
 
-    // simple main menu (will expand)
-    const mainMenu = new Menu<Context>('main-menu')
+    // Register your conversation
+    this.bot.use(
+      createConversation(
+        (conv, ctx) => this.addWebsiteConv.addWebsite(conv, ctx as MyContext),
+        'add-website', // unique name for this flow
+      ),
+    );
+
+    // 3: update the "Add Website" button in the menu
+    const mainMenu = new Menu<MyContext>('main-menu')
       .text('➕ Add Website', async (ctx) => {
         await ctx.answerCallbackQuery();
-        await ctx.reply(
-          '🌐 Send the website URL to monitor\n(e.g. https://example.com)',
-        );
-        // next step: handle incoming text messages (later with conversations)
+        // Enter the conversation!
+        await ctx.conversation.enter('add-website');
       })
       .row()
       .text('📋 My Websites', async (ctx) => {
@@ -48,9 +58,7 @@ export class BotService implements OnModuleInit {
         await ctx.answerCallbackQuery();
         await ctx.editMessageText(
           'Monitor websites * Alerts on down/up * 1 min checks',
-          {
-            reply_markup: mainMenu,
-          },
+          { reply_markup: mainMenu },
         );
       });
 
@@ -67,8 +75,7 @@ export class BotService implements OnModuleInit {
     await this.bot.start();
     this.logger.log('Bot started (pooling)');
   }
-
-  getBot(): Bot {
-    return this.bot;
-  }
+  // getBot(): Bot {
+  //   return this.bot;
+  // }
 }
