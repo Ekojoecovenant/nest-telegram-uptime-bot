@@ -13,7 +13,6 @@ export async function addWebsiteConversation(
   while (true) {
     // wait for any text message (skip non-text updates)
     const { message } = await conversation.waitFor('message:text');
-
     const urlInput = message.text.trim();
 
     if (
@@ -32,21 +31,18 @@ export async function addWebsiteConversation(
 
     try {
       const url = new URL(urlInput);
-      if (!url.hostname) throw new Error('Invalid hostname');
+      if (url.protocol !== 'https:' || !url.hostname)
+        throw new Error('Invalid HTTPS URL or missing hostname');
 
       const normalized = url.origin + url.pathname;
-
-      // later: check if already exists for this user via DB
-
       await ctx.reply(`Looks good! Saving ${normalized}...`);
 
       // TODO: Save to DB via service
-      // for now, just confirm
       await ctx.reply(
         `✅ Website added: ${normalized}\n\nStatus: ⌛ (not checked yet)`,
       );
 
-      return; // back to main menu
+      return;
     } catch (err) {
       await ctx.reply(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
