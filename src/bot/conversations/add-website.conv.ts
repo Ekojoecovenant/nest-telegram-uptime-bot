@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { type Conversation } from '@grammyjs/conversations';
 import type { MyContext } from '../types';
 import { UserWebsiteService } from 'src/user-website/user-website.service';
+import { createMainMenu } from '../menus/main.menu';
 
 @Injectable()
 export class AddWebsiteConversation {
@@ -93,8 +94,8 @@ export class AddWebsiteConversation {
     }
 
     // After success, show main menu again (nice touch)
-    // await ctx.reply('What would you like to do next?', {
-    //   reply_markup: ctx.menu, // assuming main menu is available via ctx.menu
-    // });
+    await ctx.reply('What would you like to do next?', {
+      reply_markup: createMainMenu(), // assuming main menu is available via ctx.menu
+    });
   }
 }
