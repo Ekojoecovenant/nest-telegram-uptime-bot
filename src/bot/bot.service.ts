@@ -4,9 +4,12 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { Bot, InlineKeyboard } from 'grammy';
+import { Bot } from 'grammy';
 import { MyContext } from './types';
 import { ConfigService } from '@nestjs/config';
+import { conversations, createConversation } from '@grammyjs/conversations';
+import { addWebsiteConversation } from './conversations/add-website.conv';
+import { mainMenu } from './menus/main.menu';
 
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
@@ -18,49 +21,36 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
     if (!token) throw new Error('TELEGRAM_BOT_TOKEN is not set in .env');
 
-    this.bot = new Bot<MyContext>(token, {
-      // parse_mode
-    });
-  }
+    this.bot = new Bot<MyContext>(token);
 
-  async onModuleInit() {
+    // install conversations plugin
+    this.bot.use(conversations());
+
+    // Register the conversation handler
+    this.bot.use(createConversation(addWebsiteConversation, 'add-website'));
+
+    // Install main menu directly
+    this.bot.use(mainMenu);
+
+    // /start command to show the menu
+    this.bot.command('start', async (ctx) => {
+      await ctx.reply(
+        'Welcome to Uptime Monitor Bot! 👀\n\nMonitor your websites easily.',
+        {
+          reply_markup: mainMenu,
+        },
+      );
+    });
+
     // register global error handler
     this.bot.catch((err) => {
       const ctx = err.ctx;
       this.logger.log(`Error while handling update ${ctx?.update.update_id}:`);
       this.logger.log(err.error);
     });
+  }
 
-    // /start command
-    this.bot.command('start', async (ctx) => {
-      await ctx.reply(
-        'Welcome to Uptime Monitor Bot! 👀\n\n' +
-          'I can watch your websites and tell you when they go down.\n' +
-          'Use the menu below to get started.',
-        {
-          reply_markup: new InlineKeyboard()
-            .text('Add Website', 'add-website')
-            .row()
-            .text('My Websites', 'my-websites'),
-        },
-      );
-    });
-
-    // placeholder callback handlers
-    this.bot.on('callback_query:data', async (ctx) => {
-      const data = ctx.callbackQuery.data;
-
-      if (data === 'add-website') {
-        await ctx.answerCallbackQuery({ text: 'Starting add flow...' });
-        await ctx.reply('Add flow coming soon!');
-      } else if (data === 'my-websites') {
-        await ctx.answerCallbackQuery({ text: 'Loading your sites...' });
-        await ctx.reply('Your websites list coming soon!');
-      } else {
-        await ctx.answerCallbackQuery({ text: 'Unknown action' });
-      }
-    });
-
+  async onModuleInit() {
     this.logger.log('Starting Telegram bot polling...');
     await this.bot.start();
   }
