@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BotModule } from './bot/bot.module';
 import { HealthController } from './health/health.controller';
 import { HealthModule } from './health/health.module';
+import { BotWebhookController } from './bot-webhook/bot-webhook.controller';
 
 @Module({
   imports: [
@@ -26,6 +27,6 @@ import { HealthModule } from './health/health.module';
     // feature modules
     BotModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, BotWebhookController],
 })
 export class AppModule {}

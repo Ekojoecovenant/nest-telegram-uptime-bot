@@ -4,7 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { Bot } from 'grammy';
+import { Bot, webhookCallback } from 'grammy';
 import { MyContext } from './types';
 import { ConfigService } from '@nestjs/config';
 import { conversations, createConversation } from '@grammyjs/conversations';
@@ -101,12 +101,40 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
-    this.logger.log('Starting Telegram bot polling...');
-    await this.bot.start();
+    const webhookUrl = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');
+    const webhookPath = this.configService.get<string>('TELEGRAM_WEBHOOK_PATH');
+
+    if (webhookUrl) {
+      // WEBHOOK MODE
+      const fullWebhookUrl = webhookUrl.endsWith('/')
+        ? webhookUrl + webhookPath?.slice(1)
+        : webhookUrl + webhookPath;
+
+      this.logger.log(`Setting up webhook at: ${fullWebhookUrl}`);
+
+      // secret token for security
+      const secretToken =
+        'your-random-secret-' + Math.random().toString(36).slice(2);
+
+      await this.bot.api.setWebhook(fullWebhookUrl, {
+        allowed_updates: ['message', 'callback_query', 'inline_query'], // add what you use
+        secret_token: secretToken, // optional but recommended
+      });
+
+      this.logger.log('Webhook set successfully! Bot now in webhook mode.');
+    } else {
+      // POLLING MODE (fallback)
+      this.logger.log('Starting Telegram bot polling...');
+      await this.bot.start();
+    }
   }
 
   async onModuleDestroy() {
     this.logger.log('Stopping Telegram bot...');
     await this.bot.stop();
+  }
+
+  getWebhookMiddleware() {
+    return webhookCallback(this.bot, 'express');
   }
 }
