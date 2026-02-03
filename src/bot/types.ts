@@ -8,4 +8,4 @@ export type MyConversation = Conversation<MyContext>;
 //   // session data
 // }
 
-export type MyContext = ConversationFlavor<Context> & MenuFlavor;
+export type MyContext = Context & ConversationFlavor<Context> & MenuFlavor;

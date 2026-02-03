@@ -1,9 +1,12 @@
 import { Conversation } from '@grammyjs/conversations';
 import { MyContext } from '../types';
+import { UserWebsiteService } from 'src/user-website/user-website.service';
+import { WebsiteStatus } from 'src/domain/website.entity';
 
 export async function addWebsiteConversation(
   conversation: Conversation,
   ctx: MyContext,
+  userWebsiteService: UserWebsiteService,
 ) {
   await ctx.reply(
     'Please send me the website URL to monitor.\n\n' +
@@ -15,11 +18,8 @@ export async function addWebsiteConversation(
     const { message } = await conversation.waitFor('message:text');
     const urlInput = message.text.trim();
 
-    if (
-      urlInput.toLowerCase() == '/cancel' ||
-      urlInput.toLowerCase() === 'cancel'
-    ) {
-      await ctx.reply('Cancelled. Back to main menu.');
+    if (['/cancel', 'cancel'].includes(urlInput.toLowerCase())) {
+      await ctx.reply('Cancelled.');
       return;
     }
 
@@ -34,21 +34,34 @@ export async function addWebsiteConversation(
       if (url.protocol !== 'https:' || !url.hostname)
         throw new Error('Invalid HTTPS URL or missing hostname');
 
-      const normalized = url.origin + url.pathname;
-      await ctx.reply(`Looks good! Saving ${normalized}...`);
+      const normalized = url.origin + (url.pathname || '/');
+      await ctx.reply(`Valid! Saving ${normalized}...`);
 
-      // TODO: Save to DB via service
+      const website = await userWebsiteService.addWebsiteForUser(
+        ctx.from!.id.toString(),
+        normalized,
+      );
+
       await ctx.reply(
-        `✅ Website added: ${normalized}\n\nStatus: ⌛ (not checked yet)`,
+        `✅ Website added: ${website.url}\nStatus: ${getStatusEmoji(website.status)}`,
       );
 
       return;
-    } catch (err) {
-      await ctx.reply(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        `Invalid URL: ${err?.message ? err.message : 'Parse failed'}. Please try again or /cancel.`,
-      );
-      continue;
+    } catch {
+      await ctx.reply(`Invalid URL. Try again or /cancel.`);
     }
+  }
+}
+
+export function getStatusEmoji(status: WebsiteStatus): string {
+  switch (status) {
+    case WebsiteStatus.UP:
+      return '🟢';
+    case WebsiteStatus.DOWN:
+      return '🔴';
+    case WebsiteStatus.PENDING:
+      return '⌛';
+    default:
+      return '⚪';
   }
 }

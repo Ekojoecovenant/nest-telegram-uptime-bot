@@ -6,9 +6,13 @@ export const mainMenu: Menu<MyContext> = new Menu<MyContext>('main-menu')
     await ctx.conversation.enter('add-website');
   })
   .row()
-  .text('📋 My Websites', async (ctx) => {
-    await ctx.reply('Your websites list coming soon...');
-  })
+  .text('📋 My Websites', (ctx) => ctx.menu.nav('my-websites-menu'))
+  // .dynamic((ctx, range) => {
+  //   const telegramId = ctx.from?.id.toString();
+  //   if (!telegramId) return;
+
+  //   range.text('📋 My Websites', (ctx) => ctx.menu.nav('my-websites-menu'));
+  // })
   .row()
   .text('ℹ️ Help', async (ctx) => {
     await ctx.reply(
