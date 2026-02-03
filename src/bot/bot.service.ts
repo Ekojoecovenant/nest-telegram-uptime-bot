@@ -57,7 +57,10 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     );
     // this.bot.use(createConversation(addWebsiteConversation, 'add-website'));
 
-    this.myWebsitesMenu = createMyWebsitesMenu(this.userWebsiteService);
+    this.myWebsitesMenu = createMyWebsitesMenu(
+      this.userWebsiteService,
+      this.monitorService,
+    );
 
     // Install main menu directly
     this.bot.use(mainMenu);
