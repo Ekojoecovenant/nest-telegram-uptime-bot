@@ -9,12 +9,14 @@ async function bootstrap() {
   app.enableCors();
 
   // prefix for all routes (future)
-  app.setGlobalPrefix('api');
+  // app.setGlobalPrefix('api');
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
 
   new Logger('BootStrap').log(
-    'NestJS app bootstrapped - waiting for bot to start polling...',
+    `App now running on port ${port}` +
+      'NestJS app bootstrapped - waiting for bot to start polling...',
   );
 }
 
