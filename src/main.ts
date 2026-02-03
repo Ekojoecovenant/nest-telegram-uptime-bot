@@ -12,12 +12,12 @@ async function bootstrap() {
   // app.setGlobalPrefix('api');
 
   const port = process.env.PORT ?? 3000;
-  await app.listen(port);
-
   new Logger('BootStrap').log(
     `App now running on port ${port}` +
       'NestJS app bootstrapped - waiting for bot to start polling...',
   );
+
+  await app.listen(port);
 }
 
 void bootstrap().catch((err) => {
