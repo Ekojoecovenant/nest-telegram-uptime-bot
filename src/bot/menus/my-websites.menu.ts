@@ -76,7 +76,7 @@ export function createMyWebsitesMenu(
             site.status === WebsiteStatus.UP && site.lastResponseTimeMs
               ? `${site.lastResponseTimeMs} ms`
               : site.status === WebsiteStatus.DOWN
-                ? 'DOWN'
+                ? `DOWN${site.lastErrorReason ? ` (${site.lastErrorReason})` : ''}`
                 : 'Pending';
 
           const ago = site.lastCheckedAt
@@ -116,9 +116,9 @@ export function createMyWebsitesMenu(
               // Open detail view
               await ctx.reply(
                 `🌐 **${site.url}**\n\n` +
-                  `Status: ${emoji} ${site.status.toUpperCase()}\n` +
-                  `Last check: ${site.lastCheckedAt?.toLocaleString() || 'Never'}\n` +
-                  `Response time: ${site.lastResponseTimeMs ? site.lastResponseTimeMs + 'ms' : 'N/A'}`,
+                  `Status: ${emoji} ${site.status.toUpperCase()}${site.lastErrorReason ? ` (${site.lastErrorReason})` : ''}\n` +
+                  `Last check: ${site.lastCheckedAt ? site.lastCheckedAt?.toLocaleString() : 'Never'}\n` +
+                  `Response time: ${site.lastResponseTimeMs ? site.lastResponseTimeMs + ' ms' : 'N/A'}`,
                 {
                   parse_mode: 'Markdown',
                   reply_markup: {
@@ -129,12 +129,18 @@ export function createMyWebsitesMenu(
                           callback_data: `check:${site.id}`,
                         },
                       ],
-                      // [
-                      //   {
-                      //     text: '← Back to list',
-                      //     callback_data: 'back-to-my-websites',
-                      //   },
-                      // ],
+                      [
+                        {
+                          text: '🗑️ Delete',
+                          callback_data: `delete:${site.id}`,
+                        },
+                      ],
+                      [
+                        {
+                          text: '← Back to list',
+                          callback_data: 'back-to-my-websites',
+                        },
+                      ],
                     ],
                   },
                   // reply_markup: new InlineKeyboard().text(

@@ -44,13 +44,7 @@ export class UserWebsiteService {
       await this.websiteRepo.save(website);
     }
 
-    // // Add relation if not already linked
-    // if (!user.websites?.some((w) => w.id === website.id)) {
-    //   user.websites = [...(user.websites || []), website];
-    //   await this.userRepo.save(user);
-    // }
-
-    // Add relation via query builder
+    // Add relation
     await this.userRepo
       .createQueryBuilder()
       .relation(User, 'websites')
@@ -66,10 +60,28 @@ export class UserWebsiteService {
       relations: ['websites'],
     });
 
-    // const websites = await this.websiteRepo.find({
-    //   where: { users: { id: telegramId } },
-    // });
-
     return user?.websites || [];
+  }
+
+  async removeWebsiteFromUser(
+    telegramId: string,
+    websiteId: string,
+  ): Promise<void> {
+    await this.userRepo
+      .createQueryBuilder()
+      .relation(User, 'websites')
+      .of({ id: telegramId })
+      .remove({ id: websiteId });
+
+    // Optional: delete website entity if no users left (clean up)
+    const usageCount = await this.websiteRepo
+      .createQueryBuilder('website')
+      .innerJoin('website.users', 'user')
+      .where('website.id = :id', { id: websiteId })
+      .getCount();
+
+    if (usageCount === 0) {
+      await this.websiteRepo.delete(websiteId);
+    }
   }
 }

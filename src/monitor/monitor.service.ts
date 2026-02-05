@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Website, WebsiteStatus } from 'src/domain/website.entity';
@@ -15,8 +17,6 @@ export class MonitorService {
 
   async checkWebsite(website: Website): Promise<Website> {
     const start = Date.now();
-    let status: WebsiteStatus = WebsiteStatus.DOWN;
-    let responseTimeMs: number | null = null;
 
     try {
       const res = await axios.head(website.url, {
@@ -24,19 +24,33 @@ export class MonitorService {
         validateStatus: () => true,
       });
 
-      if (res.status >= 200 && res.status < 400) {
-        status = WebsiteStatus.UP;
-      }
-      responseTimeMs = Date.now() - start;
-    } catch {
-      // Network error, timeout, => DOWN
-      status = WebsiteStatus.DOWN;
-      responseTimeMs = null;
-    }
+      website.status =
+        res.status >= 200 && res.status < 400
+          ? WebsiteStatus.UP
+          : WebsiteStatus.DOWN;
+      website.lastResponseTimeMs = Date.now() - start;
+      website.lastCheckedAt = new Date();
+      website.lastErrorReason =
+        website.status === WebsiteStatus.DOWN
+          ? `${res.status} ${res.statusText}`
+          : undefined;
+    } catch (err: any) {
+      website.status = WebsiteStatus.DOWN;
+      website.lastResponseTimeMs = null;
+      website.lastCheckedAt = new Date();
 
-    website.status = status;
-    website.lastResponseTimeMs = responseTimeMs;
-    website.lastCheckedAt = new Date();
+      // Capture meaningful reason
+      if (err.response) {
+        // response with error (4xx/5xx)
+        website.lastErrorReason = `${err.response.status} ${err.response.statusText || 'unknown'}`;
+      } else if (err.request) {
+        // no response (timeout, dns fail, connection refused, etc.)
+        website.lastErrorReason = err.code || err.message || 'Network failure';
+        // common err.code: ECONNREFUSED, ETIMEDOUT, ENOTFOUND, EHOSTUNREACH
+      } else {
+        website.lastErrorReason = err.message || 'Unknown error';
+      }
+    }
 
     return this.websiteRepo.save(website);
   }

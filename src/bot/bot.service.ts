@@ -85,6 +85,26 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
     this.bot.on('callback_query:data', async (ctx) => {
       const data = ctx.callbackQuery.data;
+
+      // Delete website callback
+      if (data?.startsWith('delete:')) {
+        const websiteId = data.split(':')[1];
+        await ctx.answerCallbackQuery({ text: 'Deleting...' });
+
+        // delete logic
+        await this.userWebsiteService.removeWebsiteFromUser(
+          ctx.from.id.toString(),
+          websiteId,
+        );
+
+        // await ctx.menu.update();
+        await ctx.editMessageText(
+          'Website removed successfully. Refresh list if needed.',
+        );
+        // or ctx.menu.update() to refresh submenu dynamically
+      }
+
+      // Check Now callback
       if (data?.startsWith('check:')) {
         const websiteId = data.split(':')[1];
         await ctx.answerCallbackQuery({ text: 'Checking...' });
@@ -96,6 +116,11 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
             `Checked ${updated.url}:\nStatus: ${getStatusEmoji(updated.status)}`,
           );
         }
+      }
+
+      // Back to list callback
+      if (data === 'back-to-my-websites') {
+        ctx.menu.nav('my-websites-menu');
       }
     });
   }

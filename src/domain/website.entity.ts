@@ -29,6 +29,9 @@ export class Website {
   @Column({ type: 'timestamp', nullable: true })
   lastCheckedAt: Date | null;
 
+  @Column({ type: 'varchar', nullable: true, length: 255 })
+  lastErrorReason?: string; // 503 Service Unavailable
+
   @Column({ default: true })
   isActive: boolean;
 
