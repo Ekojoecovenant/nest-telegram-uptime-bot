@@ -9,16 +9,14 @@ import { Bot, InlineKeyboard, webhookCallback } from 'grammy';
 import { MyContext } from './types';
 import { ConfigService } from '@nestjs/config';
 import { conversations, createConversation } from '@grammyjs/conversations';
-import {
-  addWebsiteConversation,
-  getStatusEmoji,
-} from './conversations/add-website.conv';
+import { addWebsiteConversation } from './conversations/add-website.conv';
 import { mainMenu } from './menus/main.menu';
 import { UserWebsiteService } from 'src/user-website/user-website.service';
 import { MonitorService } from 'src/monitor/monitor.service';
 import { createMyWebsitesMenu } from './menus/my-websites.menu';
 import { Menu } from '@grammyjs/menu';
 import { Website } from 'src/domain/website.entity';
+import { getStatusEmoji, timeAgo } from 'src/utils/func.utils';
 
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
@@ -185,9 +183,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
         // Back to list callback
         else if (data === 'back-to-my-websites') {
-          await ctx.editMessageText('Available sites to monitor', {
-            reply_markup: this.myWebsitesMenu,
-          });
+          await ctx.editMessageText(
+            'Welcome to Uptime Monitor Bot! 👀\n\nMonitor your websites easily.',
+            {
+              reply_markup: this.myWebsitesMenu,
+            },
+          );
         }
 
         // Back to main menu
@@ -200,14 +201,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
           );
         }
       } catch (err: any) {
-        console.log(err.error_code);
-        console.log(err.description);
         if (
           err.error_code === 400 &&
           // eslint-disable-next-line @typescript-eslint/no-unsafe-call
           err.description.startsWith('Bad Request: message is not modified:')
         ) {
-          console.log('Red notice');
+          return;
         } else {
           this.logger.error(`Callback query error: ${err.message}`);
           await ctx.editMessageText(`Something went wrong: ${err.message}`);
@@ -269,7 +268,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     const detailText =
       `🌐 **${site.url}**\n\n` +
       `Status: ${emoji} ${site.status.toUpperCase()}${site.lastErrorReason ? ` (${site.lastErrorReason})` : ''}\n` +
-      `Last check: ${site.lastCheckedAt ? site.lastCheckedAt.toLocaleDateString() : 'Never'}\n` +
+      `Last check: ${timeAgo(site.lastCheckedAt)}\n` +
       `Response time: ${site.lastResponseTimeMs ? site.lastResponseTimeMs + ' ms' : 'N/A'}`;
 
     const keyboard = new InlineKeyboard()

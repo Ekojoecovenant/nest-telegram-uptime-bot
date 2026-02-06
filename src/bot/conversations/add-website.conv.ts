@@ -1,7 +1,7 @@
 import { Conversation } from '@grammyjs/conversations';
 import { MyContext } from '../types';
 import { UserWebsiteService } from 'src/user-website/user-website.service';
-import { WebsiteStatus } from 'src/domain/website.entity';
+import { getStatusEmoji } from 'src/utils/func.utils';
 
 export async function addWebsiteConversation(
   conversation: Conversation,
@@ -50,18 +50,5 @@ export async function addWebsiteConversation(
     } catch {
       await ctx.reply(`Invalid URL. Try again or /cancel.`);
     }
-  }
-}
-
-export function getStatusEmoji(status: WebsiteStatus): string {
-  switch (status) {
-    case WebsiteStatus.UP:
-      return '🟢';
-    case WebsiteStatus.DOWN:
-      return '🔴';
-    case WebsiteStatus.PENDING:
-      return '⌛';
-    default:
-      return '⚪';
   }
 }

@@ -4,6 +4,7 @@ import { MyContext } from '../types';
 import { Logger } from '@nestjs/common';
 import { MonitorService } from 'src/monitor/monitor.service';
 import { Website, WebsiteStatus } from 'src/domain/website.entity';
+import { getStatusEmoji, timeAgo } from 'src/utils/func.utils';
 
 const logger = new Logger('MyWebsiteMenu');
 
@@ -110,7 +111,7 @@ export function createMyWebsitesMenu(
               const detailText =
                 `🌐 **${site.url}**\n\n` +
                 `Status: ${emoji} ${site.status.toUpperCase()}${site.lastErrorReason ? ` (${site.lastErrorReason})` : ''}\n` +
-                `Last check: ${site.lastCheckedAt ? site.lastCheckedAt.toLocaleDateString() : 'Never'}\n` +
+                `Last check: ${timeAgo(site.lastCheckedAt)}\n` +
                 `Response time: ${site.lastResponseTimeMs ? site.lastResponseTimeMs + ' ms' : 'N/A'}`;
 
               const keyboard = {
@@ -156,26 +157,4 @@ export function createMyWebsitesMenu(
   });
 
   return menu;
-}
-
-function getStatusEmoji(status: WebsiteStatus): string {
-  switch (status) {
-    case WebsiteStatus.UP:
-      return '🟢';
-    case WebsiteStatus.DOWN:
-      return '🔴';
-    case WebsiteStatus.PENDING:
-      return '⌛';
-    default:
-      return '⚪';
-  }
-}
-
-function timeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  let interval = seconds / 3600;
-  if (interval > 1) return Math.floor(interval) + 'h ago';
-  interval = seconds / 60;
-  if (interval > 1) return Math.floor(interval) + ' min ago';
-  return 'just now';
 }
