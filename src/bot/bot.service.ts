@@ -18,6 +18,7 @@ import { UserWebsiteService } from 'src/user-website/user-website.service';
 import { MonitorService } from 'src/monitor/monitor.service';
 import { createMyWebsitesMenu } from './menus/my-websites.menu';
 import { Menu } from '@grammyjs/menu';
+import { Website } from 'src/domain/website.entity';
 
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
@@ -93,20 +94,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
           if (!site) return;
 
-          const emoji = getStatusEmoji(site.status);
-          const detailText =
-            `🌐 **${site.url}**\n\n` +
-            `Status: ${emoji} ${site.status.toUpperCase()}${site.lastErrorReason ? ` (${site.lastErrorReason})` : ''}\n` +
-            `Last check: ${site.lastCheckedAt ? site.lastCheckedAt.toLocaleDateString() : 'Never'}\n` +
-            `Response time: ${site.lastResponseTimeMs ? site.lastResponseTimeMs + ' ms' : 'N/A'}`;
-
-          const keyboard = new InlineKeyboard()
-            .text('🔄️ Check Now', `check:${site.id}`)
-            .row()
-            .text('🗑️ Delete', `delete:${site.id}`)
-            .row()
-            .text('← Back to list', 'back-to-list');
-
+          const { detailText, keyboard } = this.infoAssist(site);
           await ctx.editMessageText(detailText, {
             parse_mode: 'Markdown',
             reply_markup: keyboard,
@@ -124,45 +112,90 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
             const updated = await this.monitorService.checkWebsite(site);
 
             // Re-build detail text with updated data
-            const emoji = getStatusEmoji(site.status);
-            const newText =
-              `🌐 **${updated.url}**\n\n` +
-              `Status: ${emoji} ${updated.status.toUpperCase()}${updated.lastErrorReason ? ` (${updated.lastErrorReason})` : ''}\n` +
-              `Last check: ${updated.lastCheckedAt ? updated.lastCheckedAt.toLocaleDateString() : 'Never'}\n` +
-              `Response time: ${updated.lastResponseTimeMs ? updated.lastResponseTimeMs + ' ms' : 'N/A'}`;
-
-            const keyboard = new InlineKeyboard()
-              .text('🔄️ Check Now', `check:${updated.id}`)
-              .row()
-              .text('🗑️ Delete', `delete:${updated.id}`)
-              .row()
-              .text('← Back to list', 'back-to-my-websites');
-
-            await ctx.editMessageText(newText, {
+            const { detailText, keyboard } = this.infoAssist(updated);
+            await ctx.editMessageText(detailText, {
               parse_mode: 'Markdown',
               reply_markup: keyboard,
             });
           }
         }
 
-        // Delete website callback
-        else if (data?.startsWith('delete:')) {
+        // Confirm delete website callback
+        else if (data?.startsWith('confirm-delete:')) {
           const siteId = data.split(':')[1];
+          const site = await this.userWebsiteService.websiteRepo.findOneBy({
+            id: siteId,
+          });
 
+          if (!site) return;
+
+          // Show confirmation
+          const confirmText = `🗑️ **Delete ${site.url}**\n\nThis action cannot be undone.`;
+
+          const confirmKeyboard = new InlineKeyboard()
+            .text('Yes, delete it', `yes-delete:${site.id}`)
+            .row()
+            .text('No, keep it', `no-delete:${site.id}`);
+
+          await ctx.editMessageText(confirmText, {
+            parse_mode: 'Markdown',
+            reply_markup: confirmKeyboard,
+          });
+        }
+
+        // Yes, delete it
+        else if (data.startsWith('yes-delete:')) {
+          const siteId = data.split(':')[1];
           await this.userWebsiteService.removeWebsiteFromUser(
             telegramId,
             siteId,
           );
 
-          await ctx.editMessageText('🗑️ Website deleted successfully');
+          await ctx.editMessageText(
+            '🗑️ Website deleted successfully.\n\nReturning to your list...',
+          );
+
+          // auto-back to list after 1.5s
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
+          setTimeout(async () => {
+            await ctx.editMessageText(
+              'Welcome to Uptime Monitor Bot! 👀\n\nMonitor your websites easily.',
+              {
+                reply_markup: this.myWebsitesMenu,
+              },
+            );
+          }, 1500);
+        }
+
+        // No, don't delete it
+        else if (data.startsWith('no-delete:')) {
+          const siteId = data.split(':')[1];
+          const site = await this.userWebsiteService.websiteRepo.findOneBy({
+            id: siteId,
+          });
+
+          if (!site) return;
+
+          const { detailText, keyboard } = this.infoAssist(site);
+          await ctx.editMessageText(detailText, {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard,
+          });
         }
 
         // Back to list callback
         else if (data === 'back-to-my-websites') {
+          await ctx.editMessageText('Available sites to monitor', {
+            reply_markup: this.myWebsitesMenu,
+          });
+        }
+
+        // Back to main menu
+        else if (data === 'back-to-main-menu') {
           await ctx.editMessageText(
             'Welcome to Uptime Monitor Bot! 👀\n\nMonitor your websites easily.',
             {
-              reply_markup: this.myWebsitesMenu,
+              reply_markup: mainMenu,
             },
           );
         }
@@ -226,5 +259,31 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   getWebhookMiddleware() {
     return webhookCallback(this.bot, 'express');
+  }
+
+  private infoAssist(site: Website): {
+    detailText: string;
+    keyboard: InlineKeyboard;
+  } {
+    const emoji = getStatusEmoji(site.status);
+    const detailText =
+      `🌐 **${site.url}**\n\n` +
+      `Status: ${emoji} ${site.status.toUpperCase()}${site.lastErrorReason ? ` (${site.lastErrorReason})` : ''}\n` +
+      `Last check: ${site.lastCheckedAt ? site.lastCheckedAt.toLocaleDateString() : 'Never'}\n` +
+      `Response time: ${site.lastResponseTimeMs ? site.lastResponseTimeMs + ' ms' : 'N/A'}`;
+
+    const keyboard = new InlineKeyboard()
+      .text('🔄️ Check Now', `check:${site.id}`)
+      .row()
+      .text('🗑️ Delete', `confirm-delete:${site.id}`)
+      .row()
+      .text('← Back to list', 'back-to-my-websites')
+      .row()
+      .text('🔰 Main Menu', 'back-to-main-menu');
+
+    return {
+      detailText,
+      keyboard,
+    };
   }
 }

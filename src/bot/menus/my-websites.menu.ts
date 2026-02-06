@@ -116,11 +116,22 @@ export function createMyWebsitesMenu(
               const keyboard = {
                 inline_keyboard: [
                   [{ text: '🔄️ Check Now', callback_data: `check:${site.id}` }],
-                  [{ text: '🗑️ Delete', callback_data: `delete:${site.id}` }],
+                  [
+                    {
+                      text: '🗑️ Delete',
+                      callback_data: `confirm-delete:${site.id}`,
+                    },
+                  ],
                   [
                     {
                       text: '← Back to list',
                       callback_data: 'back-to-my-websites',
+                    },
+                  ],
+                  [
+                    {
+                      text: '🔰 Main Menu',
+                      callback_data: 'back-to-main-menu',
                     },
                   ],
                 ],
