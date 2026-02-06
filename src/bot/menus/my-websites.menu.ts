@@ -20,11 +20,10 @@ export function createMyWebsitesMenu(
       return range;
     }
 
-    // "Check All" button
+    // ============ "Check All Now" ==============
     range
       .text('🔄️ Check All Now', async (ctx) => {
-        await ctx.answerCallbackQuery({ text: 'Checking all your sites...' });
-
+        await ctx.answerCallbackQuery();
         const websites = await userWebsiteService.getUserWebsites(telegramId);
 
         if (websites.length === 0) {
@@ -35,11 +34,11 @@ export function createMyWebsitesMenu(
         await ctx.reply('Checking your sites... This may take a few seconds.');
 
         const results: Website[] = [];
-        let upCount = 0;
-        let downCount = 0;
-        let pendingCount = 0;
-        let totalTime = 0;
-        let checkedCount = 0;
+        let upCount = 0,
+          downCount = 0,
+          pendingCount = 0;
+        let totalTime = 0,
+          checkedCount = 0;
 
         for (const site of websites) {
           try {
@@ -91,20 +90,15 @@ export function createMyWebsitesMenu(
         report += `\nGenerated: ${new Date().toLocaleString()}`;
 
         await ctx.reply(report, { parse_mode: 'Markdown' });
-        await ctx.answerCallbackQuery({ text: 'Report ready!' });
       })
       .row();
 
-    // List of individual websites
+    // ============== List of individual  ================
     try {
       const websites = await userWebsiteService.getUserWebsites(telegramId);
 
       if (websites.length === 0) {
-        range
-          .text('No websites added yet', async (ctx) => {
-            await ctx.answerCallbackQuery({ text: 'Add some first!' });
-          })
-          .row();
+        range.text('No websites added yet').row();
       } else {
         websites.forEach((site) => {
           const emoji = getStatusEmoji(site.status);
@@ -113,54 +107,39 @@ export function createMyWebsitesMenu(
 
           range
             .text(`${emoji} ${shortUrl}`, async (ctx) => {
-              // Open detail view
-              await ctx.reply(
+              const detailText =
                 `🌐 **${site.url}**\n\n` +
-                  `Status: ${emoji} ${site.status.toUpperCase()}${site.lastErrorReason ? ` (${site.lastErrorReason})` : ''}\n` +
-                  `Last check: ${site.lastCheckedAt ? site.lastCheckedAt?.toLocaleString() : 'Never'}\n` +
-                  `Response time: ${site.lastResponseTimeMs ? site.lastResponseTimeMs + ' ms' : 'N/A'}`,
-                {
-                  parse_mode: 'Markdown',
-                  reply_markup: {
-                    inline_keyboard: [
-                      [
-                        {
-                          text: '🔄️ Check Now',
-                          callback_data: `check:${site.id}`,
-                        },
-                      ],
-                      [
-                        {
-                          text: '🗑️ Delete',
-                          callback_data: `delete:${site.id}`,
-                        },
-                      ],
-                      [
-                        {
-                          text: '← Back to list',
-                          callback_data: 'back-to-my-websites',
-                        },
-                      ],
-                    ],
-                  },
-                  // reply_markup: new InlineKeyboard().text(
-                  //   'Check Now',
-                  //   `check:${site.id}`,
-                  // ),
-                },
-              );
-              await ctx.answerCallbackQuery();
+                `Status: ${emoji} ${site.status.toUpperCase()}${site.lastErrorReason ? ` (${site.lastErrorReason})` : ''}\n` +
+                `Last check: ${site.lastCheckedAt ? site.lastCheckedAt.toLocaleDateString() : 'Never'}\n` +
+                `Response time: ${site.lastResponseTimeMs ? site.lastResponseTimeMs + ' ms' : 'N/A'}`;
+
+              const keyboard = {
+                inline_keyboard: [
+                  [{ text: '🔄️ Check Now', callback_data: `check:${site.id}` }],
+                  [{ text: '🗑️ Delete', callback_data: `delete:${site.id}` }],
+                  [
+                    {
+                      text: '← Back to list',
+                      callback_data: 'back-to-my-websites',
+                    },
+                  ],
+                ],
+              };
+
+              await ctx.editMessageText(detailText, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard,
+              });
             })
             .row();
         });
       }
-
-      range.row().back('← Main Menu');
     } catch (err) {
       logger.error(`Error loading websites in menu: ${err}`);
       range.text('Error loading list', () => {}).row();
-      range.back('← Main Menu');
     }
+
+    range.row().back('← Main Menu');
 
     return range;
   });

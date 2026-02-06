@@ -20,7 +20,7 @@ export class MonitorService {
 
     try {
       const res = await axios.head(website.url, {
-        timeout: 10000,
+        timeout: 8000,
         validateStatus: () => true,
       });
 

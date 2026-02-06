@@ -7,12 +7,6 @@ export const mainMenu: Menu<MyContext> = new Menu<MyContext>('main-menu')
   })
   .row()
   .text('📋 My Websites', (ctx) => ctx.menu.nav('my-websites-menu'))
-  // .dynamic((ctx, range) => {
-  //   const telegramId = ctx.from?.id.toString();
-  //   if (!telegramId) return;
-
-  //   range.text('📋 My Websites', (ctx) => ctx.menu.nav('my-websites-menu'));
-  // })
   .row()
   .text('ℹ️ Help', async (ctx) => {
     await ctx.reply(
@@ -22,9 +16,3 @@ export const mainMenu: Menu<MyContext> = new Menu<MyContext>('main-menu')
         '• (Future: periodic alerts)',
     );
   });
-
-// dynamic label (shows count later)
-// mainMenu.dynamic(async (ctx, range) => {
-//   // Example: if we had session/user data
-//   // range.text(`Websites: ${ctx.session?.websites?.length ?? 0}`);
-// });

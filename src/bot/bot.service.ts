@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   Logger,
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { Bot, webhookCallback } from 'grammy';
+import { Bot, InlineKeyboard, webhookCallback } from 'grammy';
 import { MyContext } from './types';
 import { ConfigService } from '@nestjs/config';
 import { conversations, createConversation } from '@grammyjs/conversations';
@@ -17,22 +18,18 @@ import { UserWebsiteService } from 'src/user-website/user-website.service';
 import { MonitorService } from 'src/monitor/monitor.service';
 import { createMyWebsitesMenu } from './menus/my-websites.menu';
 import { Menu } from '@grammyjs/menu';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Website } from 'src/domain/website.entity';
-import { Repository } from 'typeorm';
 
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
   public bot: Bot<MyContext>;
   private readonly logger = new Logger(BotService.name);
   private myWebsitesMenu: Menu<MyContext>;
+  private websiteDetailMenu: Menu<MyContext>;
 
   constructor(
     private configService: ConfigService,
     private userWebsiteService: UserWebsiteService,
     private monitorService: MonitorService,
-    @InjectRepository(Website)
-    private websiteRepo: Repository<Website>,
   ) {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
 
@@ -57,13 +54,15 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     );
     // this.bot.use(createConversation(addWebsiteConversation, 'add-website'));
 
+    // Install main menu directly
+    this.bot.use(mainMenu);
+
+    // create and register submenus
     this.myWebsitesMenu = createMyWebsitesMenu(
       this.userWebsiteService,
       this.monitorService,
     );
 
-    // Install main menu directly
-    this.bot.use(mainMenu);
     mainMenu.register(this.myWebsitesMenu);
 
     // /start command to show the menu
@@ -76,52 +75,118 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       );
     });
 
+    // Global callback handler
+    this.bot.on('callback_query:data', async (ctx) => {
+      const data = ctx.callbackQuery.data;
+      if (!data) return;
+
+      await ctx.answerCallbackQuery({ text: 'Processing...' });
+
+      const telegramId = ctx.from.id.toString();
+
+      try {
+        if (data.startsWith('detail:')) {
+          const siteId = data.split(':')[1];
+          const site = await this.userWebsiteService.websiteRepo.findOne({
+            where: { id: siteId },
+          });
+
+          if (!site) return;
+
+          const emoji = getStatusEmoji(site.status);
+          const detailText =
+            `🌐 **${site.url}**\n\n` +
+            `Status: ${emoji} ${site.status.toUpperCase()}${site.lastErrorReason ? ` (${site.lastErrorReason})` : ''}\n` +
+            `Last check: ${site.lastCheckedAt ? site.lastCheckedAt.toLocaleDateString() : 'Never'}\n` +
+            `Response time: ${site.lastResponseTimeMs ? site.lastResponseTimeMs + ' ms' : 'N/A'}`;
+
+          const keyboard = new InlineKeyboard()
+            .text('🔄️ Check Now', `check:${site.id}`)
+            .row()
+            .text('🗑️ Delete', `delete:${site.id}`)
+            .row()
+            .text('← Back to list', 'back-to-list');
+
+          await ctx.editMessageText(detailText, {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard,
+          });
+        }
+
+        // Check Now callback
+        else if (data?.startsWith('check:')) {
+          const websiteId = data.split(':')[1];
+          const site = await this.userWebsiteService.websiteRepo.findOneBy({
+            id: websiteId,
+          });
+
+          if (site) {
+            const updated = await this.monitorService.checkWebsite(site);
+
+            // Re-build detail text with updated data
+            const emoji = getStatusEmoji(site.status);
+            const newText =
+              `🌐 **${updated.url}**\n\n` +
+              `Status: ${emoji} ${updated.status.toUpperCase()}${updated.lastErrorReason ? ` (${updated.lastErrorReason})` : ''}\n` +
+              `Last check: ${updated.lastCheckedAt ? updated.lastCheckedAt.toLocaleDateString() : 'Never'}\n` +
+              `Response time: ${updated.lastResponseTimeMs ? updated.lastResponseTimeMs + ' ms' : 'N/A'}`;
+
+            const keyboard = new InlineKeyboard()
+              .text('🔄️ Check Now', `check:${updated.id}`)
+              .row()
+              .text('🗑️ Delete', `delete:${updated.id}`)
+              .row()
+              .text('← Back to list', 'back-to-my-websites');
+
+            await ctx.editMessageText(newText, {
+              parse_mode: 'Markdown',
+              reply_markup: keyboard,
+            });
+          }
+        }
+
+        // Delete website callback
+        else if (data?.startsWith('delete:')) {
+          const siteId = data.split(':')[1];
+
+          await this.userWebsiteService.removeWebsiteFromUser(
+            telegramId,
+            siteId,
+          );
+
+          await ctx.editMessageText('🗑️ Website deleted successfully');
+        }
+
+        // Back to list callback
+        else if (data === 'back-to-my-websites') {
+          await ctx.editMessageText(
+            'Welcome to Uptime Monitor Bot! 👀\n\nMonitor your websites easily.',
+            {
+              reply_markup: this.myWebsitesMenu,
+            },
+          );
+        }
+      } catch (err: any) {
+        console.log(err.error_code);
+        console.log(err.description);
+        if (
+          err.error_code === 400 &&
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          err.description.startsWith('Bad Request: message is not modified:')
+        ) {
+          console.log('Red notice');
+        } else {
+          this.logger.error(`Callback query error: ${err.message}`);
+          await ctx.editMessageText(`Something went wrong: ${err.message}`);
+        }
+      }
+    });
+
     // register global error handler
     this.bot.catch((err) => {
       const ctx = err.ctx;
       this.logger.log(`Error while handling update ${ctx?.update.update_id}:`);
       this.logger.log(err.error);
-    });
-
-    this.bot.on('callback_query:data', async (ctx) => {
-      const data = ctx.callbackQuery.data;
-
-      // Delete website callback
-      if (data?.startsWith('delete:')) {
-        const websiteId = data.split(':')[1];
-        await ctx.answerCallbackQuery({ text: 'Deleting...' });
-
-        // delete logic
-        await this.userWebsiteService.removeWebsiteFromUser(
-          ctx.from.id.toString(),
-          websiteId,
-        );
-
-        // await ctx.menu.update();
-        await ctx.editMessageText(
-          'Website removed successfully. Refresh list if needed.',
-        );
-        // or ctx.menu.update() to refresh submenu dynamically
-      }
-
-      // Check Now callback
-      if (data?.startsWith('check:')) {
-        const websiteId = data.split(':')[1];
-        await ctx.answerCallbackQuery({ text: 'Checking...' });
-
-        const website = await this.websiteRepo.findOneBy({ id: websiteId });
-        if (website) {
-          const updated = await this.monitorService.checkWebsite(website);
-          await ctx.editMessageText(
-            `Checked ${updated.url}:\nStatus: ${getStatusEmoji(updated.status)}`,
-          );
-        }
-      }
-
-      // Back to list callback
-      if (data === 'back-to-my-websites') {
-        ctx.menu.nav('my-websites-menu');
-      }
     });
   }
 
@@ -138,12 +203,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`Setting up webhook at: ${fullWebhookUrl}`);
 
       // secret token for security
-      const secretToken =
-        'your-random-secret-' + Math.random().toString(36).slice(2);
+      // const secretToken =
+      //   'your-random-secret-' + Math.random().toString(36).slice(2);
 
       await this.bot.api.setWebhook(fullWebhookUrl, {
         allowed_updates: ['message', 'callback_query', 'inline_query'], // add what you use
-        secret_token: secretToken, // optional but recommended
+        // secret_token: secretToken, // optional but recommended
       });
 
       this.logger.log('Webhook set successfully! Bot now in webhook mode.');

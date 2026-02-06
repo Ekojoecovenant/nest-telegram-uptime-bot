@@ -12,7 +12,7 @@ export class UserWebsiteService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     @InjectRepository(Website)
-    private readonly websiteRepo: Repository<Website>,
+    readonly websiteRepo: Repository<Website>,
   ) {}
 
   async getOrCreateUser(telegramId: string, username?: string): Promise<User> {
