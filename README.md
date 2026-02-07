@@ -1,98 +1,148 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Nest Telegram Uptime Bot
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org)
+[![NestJS](https://img.shields.io/badge/NestJS-10+-red)](https://nestjs.com)
+[![grammY](https://img.shields.io/badge/grammY-1.x-blue)](https://grammy.dev)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/ekojoecovenant/nest-telegram-uptime-bot/actions)
+[![Deployed on pxxl.app](https://img.shields.io/badge/Deployed%20on-pxxl.app-9cf)](https://pxxl.app)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+A Telegram bot that monitors website uptime and status. Add your sites, get instant checks, see real-time status (🟢 up / 🔴 down), and receive detailed error reasons when things go wrong.
 
-## Description
+Built with **NestJS**, **grammY**, **TypeORM** + **PostgreSQL**, and **Axios**.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Features
 
-## Project setup
+- Add HTTPS websites via guided conversation
+- View your list of sites with live status emojis
+- On-demand "Check Now" for single sites or "Check All" for full reports
+- Detailed views: response time, last check (relative time), downtime reasons (e.g. 503, timeout, DNS failure)
+- Delete confirmation to prevent accidents
+- Clean single-message navigation (edits instead of spamming replies)
+- Webhook support for production (polling for local dev)
+- Deployed-ready (tested on pxxl.app)
 
-```bash
-$ npm install
+## Screenshots / Demo
+
+### Main Menu (/start)
+
+![Main Menu](./assets/screenshots/start-menu.png)
+
+### My Websites List
+
+![My Websites](./assets/screenshots/my-websites-list.png)
+
+### Detail View
+
+![Detail View](./assets/screenshots/detail-view.png)
+
+## Delete Confirmation
+
+![Delete Confirmation](./assets/screenshots/delete-confirmatioin.png)
+
+## Tech Stack
+
+- **Backend Framework**: NestJS (v10+)
+- **Telegram Bot API**: grammY + @grammyjs/menu + @grammyjs/conversations
+- **Database/ORM**: TypeORM + PostgreSQL
+- **HTTP Checks**: Axios
+- **Deployment**: pxxl.app (webhook mode)
+
+## Prerequisites
+
+- Node.js 18+
+- PostgreSQL (local or hosted)
+- Telegram Bot Token (create bot via [@BotFather](https://t.me/BotFather))
+
+## Setup & Run Locally
+
+1. Clone the repo
+
+    ```bash
+    git clone https://github.com/ekojoecovenant/nest-telegram-uptime-bot.git
+    cd nest-telegram-uptime-bot
+    ```
+
+2. Install dependencies
+
+    ```bash
+    npm install
+    ```
+
+3. Copy and configure .env
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Fill in:
+
+    ```text
+    TELEGRAM_BOT_TOKEN=your-bot-token-from-botfather
+
+    DB_URL='your-database-url' (local or online. Postgres recommended)
+
+    # Optional for webhook (production)
+    TELEGRAM_WEBHOOK_URL=https://your-domain.com (the url this app will be hosted)
+    TELEGRAM_WEBHOOK_PATH=/bot-webhook
+    ```
+
+4. Start in development mode (polling)bash
+
+    ```bash
+    npm run start:dev
+    ```
+
+The bot should come online — talk to it on Telegram!
+
+## Deployment (pxxl.app or similar)
+
+1. Push code to GitHub / Git repo
+2. In pxxl.app dashboard:
+    - Create new service from Git repo
+    - Set runtime: Node.js
+    - Add environment variables (from your `.env`)
+    - Expose port (usually 3000 or whatever `main.ts` listens on)
+    - Enable webhook mode by setting `TELEGRAM_WEBHOOK_URL` to your pxxl domain (e.g. `https://your-bot.pxxl.pro`)
+3. Deploy — bot should auto-set webhook on startup
+
+**Note**: Make sure `pxxl.app` gives you a stable HTTPS URL. If webhook fails, run manually:
+
+```text
+https://api.telegram.org/bot<YOUR_TOKEN>/setWebhook?url=https://your-domain.pxxl.pro/bot-webhook
 ```
 
-## Compile and run the project
+## Customization
 
-```bash
-# development
-$ npm run start
+- Change status emojis: edit `getStatusEmoji()` in `my-websites.menu.ts`
+- Adjust check timeout: `axios.head(..., { timeout: 10000 })` in `monitor.service.ts`
+- Add more status reasons: expand `lastErrorReason` logic in `monitor.service.ts`
+- Enable periodic checks (future): add `@nestjs/schedule` cron job
 
-# watch mode
-$ npm run start:dev
+## Project Structure
 
-# production mode
-$ npm run start:prod
+```text
+src/
+├── bot/                # Telegram bot logic (service, menus, conversations)
+│   ├── menus/
+│   ├── conversations/
+│   └── types.ts
+├── config/             # Postgres Database Configuration
+├── domain/             # TypeORM entities (User, Website)
+├── user-website/       # Service for managing user ↔ website relations
+├── monitor/            # Uptime checking logic
+├── health/             # Simple health check endpoint
+├── utils/              # Shared utility functions
+└── main.ts             # App bootstrap
 ```
 
-## Run tests
+## Contributing
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+See CONTRIBUTING.md for guidelines.
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT License — see LICENSE for details.
+Feel free to fork, modify, and use in your own projects!
+
+Made with 🤍 by [@ekojoecovenant](https://x.com/ekojoecovenant)
