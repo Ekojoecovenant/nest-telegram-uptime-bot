@@ -5,6 +5,7 @@ import { Logger } from '@nestjs/common';
 import { MonitorService } from 'src/monitor/monitor.service';
 import { Website, WebsiteStatus } from 'src/domain/website.entity';
 import { getStatusEmoji, timeAgo } from 'src/utils/func.utils';
+import { InlineKeyboard } from 'grammy';
 
 const logger = new Logger('MyWebsiteMenu');
 
@@ -99,7 +100,21 @@ export function createMyWebsitesMenu(
       const websites = await userWebsiteService.getUserWebsites(telegramId);
 
       if (websites.length === 0) {
-        range.text('No websites added yet').row();
+        range
+          .text('No websites yet', async (ctx) => {
+            const emptyText = `📋 **My Websites**\n\nYou don't have any websites added yet.\nAdd one to start monitoring!`;
+
+            const keyboard = new InlineKeyboard()
+              .text(`➕ Add Website`, 'add-website')
+              .row()
+              .text('← Main Menu', 'back-to-main-menu');
+
+            await ctx.editMessageText(emptyText, {
+              parse_mode: 'Markdown',
+              reply_markup: keyboard,
+            });
+          })
+          .row();
       } else {
         websites.forEach((site) => {
           const emoji = getStatusEmoji(site.status);
