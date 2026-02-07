@@ -13,7 +13,6 @@ export const getDatabaseConfig = (
   // password: configService.get<string>('DB_PASSWORD', ''),
   // database: configService.get<string>('DB_NAME', 'postgres'),
   url: configService.get<string>('DB_URL'),
-  // entities: [__dirname + '../domain/*.entity{.ts,.js}'],
   entities: [User, Website],
   synchronize: configService.get<string>('NODE_ENV') === 'development',
   logging: ['query', 'error', 'warn'],
